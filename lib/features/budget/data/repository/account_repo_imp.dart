@@ -37,4 +37,12 @@ class AccountRepoImp implements AccountRepository {
     final updated = model.copyWith(balance: newBalance);
     await _local.saveAccount(updated);
   }
+
+  @override
+  Future<void> renameAccount(String id, String newName) async {
+    final model = await _local.getAccount(id);
+    if (model == null) return;
+    final updated = model.copyWith(name: newName);
+    await _local.saveAccount(updated);
+  }
 }
