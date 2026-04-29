@@ -46,7 +46,7 @@ class LocalDatasource {
   /// delete account
   Future<void> deleteAccount(String id) async {
     final box = await _accountBox;
-    box.delete(id);
+    await box.delete(id);
   }
 
   // MARK: - CATEGORY
@@ -90,6 +90,12 @@ class LocalDatasource {
   Future<void> saveTransaction(TransactionModel model) async {
     final box = await _transactionBox;
     await box.put(model.id, model);
+  }
+
+  /// get transaction by id
+  Future<TransactionModel?> getTransaction(String id) async {
+    final box = await _transactionBox;
+    return box.get(id);
   }
 
   /// delete transaction

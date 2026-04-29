@@ -39,6 +39,8 @@ abstract class AccountModel with _$AccountModel {
       userId: account.userId,
       name: account.name,
       balance: account.balance,
+      icon: account.icon,
+      color: account.color,
       createdAt: account.createdAt,
     );
   }
