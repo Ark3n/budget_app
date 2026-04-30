@@ -238,6 +238,11 @@ class _CreateTransactionPageState extends State<CreateTransactionPage> {
                               name: 'salary',
                             ),
                           );
+                          if (context.mounted) {
+                            setState(() {
+                              amount = '0';
+                            });
+                          }
                           if (!context.mounted) return;
                           if (Navigator.canPop(context)) {
                             Navigator.pop(context);
@@ -252,6 +257,11 @@ class _CreateTransactionPageState extends State<CreateTransactionPage> {
                             type: selectedTransactionType,
                             category: selectedCategory,
                           );
+                          if (context.mounted) {
+                            setState(() {
+                              amount = '0';
+                            });
+                          }
                           if (!context.mounted) return;
                           if (Navigator.canPop(context)) {
                             Navigator.pop(context);
