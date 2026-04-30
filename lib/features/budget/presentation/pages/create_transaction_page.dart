@@ -239,7 +239,9 @@ class _CreateTransactionPageState extends State<CreateTransactionPage> {
                             ),
                           );
                           if (!context.mounted) return;
-                          Navigator.pop(context);
+                          if (Navigator.canPop(context)) {
+                            Navigator.pop(context);
+                          }
                         } else {
                           final selectedCategory =
                               await _showExpenseCategoryModal();
@@ -251,7 +253,9 @@ class _CreateTransactionPageState extends State<CreateTransactionPage> {
                             category: selectedCategory,
                           );
                           if (!context.mounted) return;
-                          Navigator.pop(context);
+                          if (Navigator.canPop(context)) {
+                            Navigator.pop(context);
+                          }
                         }
                       },
                 child: CircleAvatar(
