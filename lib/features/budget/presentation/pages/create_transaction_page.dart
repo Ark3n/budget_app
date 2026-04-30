@@ -24,6 +24,10 @@ class _CreateTransactionPageState extends State<CreateTransactionPage> {
   ];
   double get _parsedAmount => double.tryParse(amount) ?? 0;
   bool get _canSubmit => _parsedAmount > 0;
+  String get _amountLabel {
+    final sign = selectedTransactionType == TransactionType.income ? '+' : '-';
+    return '$sign$amount';
+  }
 
   Future<void> _createAndRefresh({
     required double value,
@@ -204,23 +208,31 @@ class _CreateTransactionPageState extends State<CreateTransactionPage> {
               const SizedBox(height: 40),
 
               SizedBox(
-                height: 100,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    amount,
-                    maxLines: 1,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 56, color: Colors.black87),
+                height: 96,
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      _amountLabel,
+                      maxLines: 1,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 56,
+                        fontWeight: FontWeight.w600,
+                        color: selectedTransactionType == TransactionType.income
+                            ? Colors.green
+                            : Colors.red,
+                      ),
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 16),
 
               // Amount keyboard
-              AmountKeyboard(onTap: _onKeyTap),
+              Expanded(child: Center(child: AmountKeyboard(onTap: _onKeyTap))),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
 
               // Submit transaction
               GestureDetector(

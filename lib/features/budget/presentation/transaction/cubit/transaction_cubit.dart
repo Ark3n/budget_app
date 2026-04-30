@@ -19,10 +19,12 @@ class TransactionCubit extends Cubit<TransactionState> {
     );
     try {
       final transactions = await _transactionRepository.getTransactions();
+      final sortedTransactions = [...transactions]
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
       emit(
         state.copyWith(
           status: TransactionStatus.success,
-          transactions: transactions,
+          transactions: sortedTransactions,
           error: null,
           transaction: null,
         ),
@@ -45,6 +47,7 @@ class TransactionCubit extends Cubit<TransactionState> {
     );
     try {
       await _transactionRepository.createTransaction(transaction);
+
       // Refresh list so UI reflects the newly-created transaction.
       await getTransactions();
     } catch (e) {
