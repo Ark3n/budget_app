@@ -1,3 +1,4 @@
+import 'package:budget_app/features/budget/domain/budget_defaults.dart';
 import 'package:budget_app/features/budget/domain/entities/account.dart';
 import 'package:budget_app/features/budget/domain/repository/account_repository.dart';
 import 'package:budget_app/features/budget/presentation/account/cubit/account_state.dart';
@@ -9,7 +10,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 /// - success: accounts loaded and total balance calculated
 /// - failure: account operation failed
 class AccountCubit extends Cubit<AccountState> {
-  static const String defaultAccountId = 'default_salary_account';
+  static String get defaultAccountId => BudgetDefaults.defaultAccountId;
   static const String defaultUserId = 'local_user';
   static const String defaultAccountName = 'Salary';
 
@@ -64,6 +65,21 @@ class AccountCubit extends Cubit<AccountState> {
     }
   }
 
+  /// Sets the default account balance to [BudgetDefaults.initialAccountBalance].
+  /// Transaction history is unchanged; totals may no longer match.
+  Future<void> resetBalanceToInitial() async {
+    emit(state.copyWith(status: AccountStatus.loading, error: null));
+    try {
+      await _accountRepository.updateAccount(
+        defaultAccountId,
+        BudgetDefaults.initialAccountBalance,
+      );
+      await loadAccounts();
+    } catch (e) {
+      emit(state.copyWith(status: AccountStatus.failure, error: e.toString()));
+    }
+  }
+
   Future<void> _ensureDefaultAccount() async {
     final account = await _accountRepository.getAccount(defaultAccountId);
     if (account != null) return;
@@ -73,7 +89,7 @@ class AccountCubit extends Cubit<AccountState> {
         id: defaultAccountId,
         userId: defaultUserId,
         name: defaultAccountName,
-        balance: 0,
+        balance: BudgetDefaults.initialAccountBalance,
         icon: null,
         color: null,
         createdAt: DateTime.now(),

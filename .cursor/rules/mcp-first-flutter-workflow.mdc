@@ -1,0 +1,32 @@
+---
+description: MCP-first workflow for Flutter clean architecture development
+globs: **/*.{dart,yaml,yml,json,md}
+alwaysApply: false
+---
+
+# MCP-First Flutter Workflow
+
+## Core Rule
+- Do not guess. Use available MCP tools whenever relevant and rely on returned data.
+
+## MCP Tool Selection
+- Use Dart/Flutter MCP for code analysis and code generation tasks.
+- Use Filesystem MCP to inspect project structure and existing files before coding.
+- Use Supabase MCP for backend/database/auth/storage operations.
+- Use Context7 MCP for current, version-accurate framework/library documentation.
+- Use Figma MCP for UI design context, design specs, and design-to-code alignment.
+
+## Before Writing Code (Required Sequence)
+1. Read project files via MCP.
+2. Understand existing architecture, conventions, and dependencies.
+3. Generate and apply the solution based on MCP evidence.
+
+## Flutter Implementation Standards
+- Follow Clean Architecture boundaries: `data/`, `domain/`, `presentation/`.
+- Use Cubit with `flutter_bloc` for state management unless events require Bloc.
+- Use repository pattern with clear interfaces in domain and implementations in data.
+- Produce production-ready code (typed, testable, and aligned with project conventions).
+
+## Example Behavior
+- ❌ BAD: Start coding from assumptions without reading files/docs.
+- ✅ GOOD: Inspect structure with Filesystem MCP, check Flutter API details with Context7, validate backend operations with Supabase MCP, review UI design context from Figma MCP, then implement using Dart/Flutter MCP outputs.

@@ -4,8 +4,10 @@ import 'package:budget_app/features/budget/data/models/category_model.dart';
 import 'package:budget_app/features/budget/data/models/transaction_model.dart';
 import 'package:budget_app/features/budget/data/models/transaction_type_adapter.dart';
 import 'package:budget_app/features/budget/data/repository/account_repo_imp.dart';
+import 'package:budget_app/features/budget/data/repository/category_repo_imp.dart';
 import 'package:budget_app/features/budget/data/repository/transaction_repo_imp.dart';
 import 'package:budget_app/features/budget/presentation/account/cubit/account_cubit.dart';
+import 'package:budget_app/features/budget/presentation/category/cubit/category_cubit.dart';
 import 'package:budget_app/features/budget/presentation/pages/main_tab_page.dart';
 import 'package:budget_app/features/budget/presentation/transaction/cubit/transaction_cubit.dart';
 import 'package:flutter/material.dart';
@@ -32,6 +34,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final localDatasource = LocalDatasource();
     final accountRepository = AccountRepoImp(localDatasource);
+    final categoryRepository = CategoryRepoImp(localDatasource);
     final transactionRepository = TransactionRepoImp(
       localDatasource,
       accountRepository,
@@ -44,6 +47,9 @@ class MyApp extends StatelessWidget {
         BlocProvider(
           create: (_) =>
               TransactionCubit(transactionRepository)..getTransactions(),
+        ),
+        BlocProvider(
+          create: (_) => CategoryCubit(categoryRepository)..initialize(),
         ),
       ],
       child: MaterialApp(

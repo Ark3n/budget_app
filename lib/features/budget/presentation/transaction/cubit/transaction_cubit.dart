@@ -1,4 +1,5 @@
 import 'package:budget_app/features/budget/domain/entities/transaction.dart';
+import 'package:budget_app/features/budget/domain/exceptions/insufficient_balance_exception.dart';
 import 'package:budget_app/features/budget/domain/repository/transaction_repository.dart';
 import 'package:budget_app/features/budget/presentation/transaction/cubit/transaction_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7,6 +8,28 @@ class TransactionCubit extends Cubit<TransactionState> {
   final TransactionRepository _transactionRepository;
   TransactionCubit(this._transactionRepository)
     : super(const TransactionState());
+
+  /// Resets a mutation error so list screens don’t treat [TransactionStatus.failure]
+  /// as “failed to load” while cached [TransactionState.transactions] are still valid.
+  Future<void> clearTransientFailure() async {
+    if (state.status != TransactionStatus.failure) return;
+    if (state.transactions.isNotEmpty) {
+      emit(state.copyWith(status: TransactionStatus.success, error: null));
+      return;
+    }
+    await getTransactions();
+  }
+
+  static String _userFacingMessage(Object error) {
+    if (error is InsufficientBalanceException) {
+      return InsufficientBalanceException.userMessage;
+    }
+    final raw = error.toString();
+    if (raw.startsWith('Exception: ')) {
+      return raw.substring('Exception: '.length);
+    }
+    return "We couldn’t save your change. Please try again.";
+  }
 
   // get transactions
   Future<void> getTransactions() async {
@@ -31,7 +54,10 @@ class TransactionCubit extends Cubit<TransactionState> {
       );
     } catch (e) {
       emit(
-        state.copyWith(status: TransactionStatus.failure, error: e.toString()),
+        state.copyWith(
+          status: TransactionStatus.failure,
+          error: _userFacingMessage(e),
+        ),
       );
     }
   }
@@ -52,7 +78,10 @@ class TransactionCubit extends Cubit<TransactionState> {
       await getTransactions();
     } catch (e) {
       emit(
-        state.copyWith(status: TransactionStatus.failure, error: e.toString()),
+        state.copyWith(
+          status: TransactionStatus.failure,
+          error: _userFacingMessage(e),
+        ),
       );
     }
   }
@@ -72,7 +101,32 @@ class TransactionCubit extends Cubit<TransactionState> {
       await getTransactions();
     } catch (e) {
       emit(
-        state.copyWith(status: TransactionStatus.failure, error: e.toString()),
+        state.copyWith(
+          status: TransactionStatus.failure,
+          error: _userFacingMessage(e),
+        ),
+      );
+    }
+  }
+
+  /// Clears every transaction and resets the default account balance.
+  Future<void> deleteAllTransactions() async {
+    emit(
+      state.copyWith(
+        status: TransactionStatus.loading,
+        error: null,
+        transaction: null,
+      ),
+    );
+    try {
+      await _transactionRepository.deleteAllTransactions();
+      await getTransactions();
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: TransactionStatus.failure,
+          error: _userFacingMessage(e),
+        ),
       );
     }
   }
@@ -92,7 +146,10 @@ class TransactionCubit extends Cubit<TransactionState> {
       await getTransactions();
     } catch (e) {
       emit(
-        state.copyWith(status: TransactionStatus.failure, error: e.toString()),
+        state.copyWith(
+          status: TransactionStatus.failure,
+          error: _userFacingMessage(e),
+        ),
       );
     }
   }

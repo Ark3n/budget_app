@@ -5,4 +5,7 @@ abstract class TransactionRepository {
   Future<void> createTransaction(Transaction transaction);
   Future<void> updateTransaction(Transaction transaction);
   Future<void> deleteTransaction(Transaction transaction);
+
+  /// Clears all transactions and resets the default account balance to the app default.
+  Future<void> deleteAllTransactions();
 }

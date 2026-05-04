@@ -1,5 +1,6 @@
 import 'package:budget_app/features/budget/presentation/pages/create_transaction_page.dart';
-import 'package:budget_app/features/budget/presentation/pages/home_page.dart';
+import 'package:budget_app/features/budget/presentation/pages/history_page.dart';
+import 'package:budget_app/features/budget/presentation/pages/settings_page.dart';
 import 'package:flutter/material.dart';
 
 class MainTabPage extends StatefulWidget {
@@ -14,8 +15,8 @@ class _MainTabPageState extends State<MainTabPage> {
 
   late final List<Widget> _pages = const [
     CreateTransactionPage(),
-    HomePage(),
-    _SettingsPage(),
+    HistoryPage(),
+    SettingsPage(),
   ];
 
   @override
@@ -42,20 +43,3 @@ class _MainTabPageState extends State<MainTabPage> {
   }
 }
 
-class _SettingsPage extends StatelessWidget {
-  const _SettingsPage();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: Text(
-            'Settings',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-          ),
-        ),
-      ),
-    );
-  }
-}

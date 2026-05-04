@@ -1,8 +1,11 @@
 import 'package:budget_app/features/budget/domain/entities/category.dart';
 import 'package:budget_app/features/budget/domain/entities/transaction.dart';
 import 'package:budget_app/features/budget/presentation/account/cubit/account_cubit.dart';
+import 'package:budget_app/features/budget/presentation/category/cubit/category_cubit.dart';
 import 'package:budget_app/features/budget/presentation/pages/widgets/amount_keyboard.dart';
+import 'package:budget_app/features/budget/presentation/pages/widgets/select_category_bottom_sheet.dart';
 import 'package:budget_app/features/budget/presentation/transaction/cubit/transaction_cubit.dart';
+import 'package:budget_app/features/budget/presentation/transaction/cubit/transaction_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -16,17 +19,13 @@ class CreateTransactionPage extends StatefulWidget {
 class _CreateTransactionPageState extends State<CreateTransactionPage> {
   TransactionType selectedTransactionType = TransactionType.expense;
   String amount = '0';
-  final List<Category> _expenseCategories = [
-    Category(id: 'food', name: 'Food'),
-    Category(id: 'transport', name: 'Transport'),
-    Category(id: 'shopping', name: 'Shopping'),
-    Category(id: 'bills', name: 'Bills'),
-  ];
   double get _parsedAmount => double.tryParse(amount) ?? 0;
   bool get _canSubmit => _parsedAmount > 0;
-  String get _amountLabel {
+
+  /// Material-style amount, e.g. `-$278.40` or `+$100`.
+  String get _amountDisplay {
     final sign = selectedTransactionType == TransactionType.income ? '+' : '-';
-    return '$sign$amount';
+    return '$sign\$$amount';
   }
 
   Future<void> _createAndRefresh({
@@ -34,7 +33,8 @@ class _CreateTransactionPageState extends State<CreateTransactionPage> {
     required TransactionType type,
     required Category category,
   }) async {
-    await context.read<TransactionCubit>().createTransaction(
+    final transactionCubit = context.read<TransactionCubit>();
+    await transactionCubit.createTransaction(
       Transaction(
         id: DateTime.now().microsecondsSinceEpoch.toString(),
         userId: 'me',
@@ -46,91 +46,69 @@ class _CreateTransactionPageState extends State<CreateTransactionPage> {
         accountId: AccountCubit.defaultAccountId,
       ),
     );
+    if (!mounted) return;
+    if (transactionCubit.state.status == TransactionStatus.failure) {
+      final message =
+          transactionCubit.state.error ??
+          "We couldn’t save this transaction. Please try again.";
+      final colorScheme = Theme.of(context).colorScheme;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          backgroundColor: colorScheme.inverseSurface,
+          content: Text(
+            message,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: colorScheme.onInverseSurface,
+            ),
+          ),
+        ),
+      );
+      await transactionCubit.clearTransientFailure();
+      return;
+    }
     await context.read<AccountCubit>().loadAccounts();
   }
 
-  Future<Category?> _showExpenseCategoryModal() async {
-    Category? selectedCategory = _expenseCategories.first;
-    final controller = TextEditingController();
+  Future<void> _submit(List<Category> expenseCategories) async {
+    if (!_canSubmit) return;
+    final value = _parsedAmount;
 
-    final result = await showModalBottomSheet<Category>(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (modalContext, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 16,
-                bottom: MediaQuery.of(modalContext).viewInsets.bottom + 16,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Text(
-                    'Select category',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _expenseCategories.map((category) {
-                      final isSelected = selectedCategory?.id == category.id;
-                      return ChoiceChip(
-                        label: Text(category.name),
-                        selected: isSelected,
-                        onSelected: (_) {
-                          setModalState(() {
-                            selectedCategory = category;
-                          });
-                        },
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: controller,
-                    decoration: const InputDecoration(
-                      labelText: 'Create category',
-                      hintText: 'Example: Coffee',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  ElevatedButton(
-                    onPressed: () {
-                      final name = controller.text.trim();
-                      if (name.isEmpty) return;
-                      final created = Category(
-                        id: DateTime.now().microsecondsSinceEpoch.toString(),
-                        name: name,
-                      );
-                      setState(() {
-                        _expenseCategories.add(created);
-                      });
-                      Navigator.pop(sheetContext, created);
-                    },
-                    child: const Text('Create and select'),
-                  ),
-                  const SizedBox(height: 8),
-                  ElevatedButton(
-                    onPressed: selectedCategory == null
-                        ? null
-                        : () => Navigator.pop(sheetContext, selectedCategory),
-                    child: const Text('Continue'),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+    if (selectedTransactionType == TransactionType.income) {
+      final salaryCategory = await context
+          .read<CategoryCubit>()
+          .ensureSalaryCategory();
+      if (!mounted) return;
+      await _createAndRefresh(
+        value: value,
+        type: selectedTransactionType,
+        category: salaryCategory,
+      );
+      if (!mounted) return;
+      setState(() => amount = '0');
+      if (Navigator.canPop(context)) Navigator.pop(context);
+      return;
+    }
+
+    final selectedCategory = await showSelectCategorySheet(
+      context,
+      expenseCategories,
     );
-    controller.dispose();
-    return result;
+    if (selectedCategory == null) return;
+    if (!mounted) return;
+
+    await _createAndRefresh(
+      value: value,
+      type: selectedTransactionType,
+      category: selectedCategory,
+    );
+    if (!mounted) return;
+    setState(() => amount = '0');
+    if (Navigator.canPop(context)) Navigator.pop(context);
   }
 
   void _onKeyTap(String value) {
@@ -161,135 +139,146 @@ class _CreateTransactionPageState extends State<CreateTransactionPage> {
 
   @override
   Widget build(BuildContext context) {
-    final totalBalance = context.watch<AccountCubit>().state.totalBalance;
+    final categories = context.watch<CategoryCubit>().state.categories;
+    final expenseCategories = categories
+        .where(
+          (category) =>
+              category.name.toLowerCase() !=
+              CategoryCubit.salaryCategoryName.toLowerCase(),
+        )
+        .toList();
+
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final amountColor = selectedTransactionType == TransactionType.income
+        ? colorScheme.primary
+        : colorScheme.error;
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // Totoal balance
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+              child: Row(
                 children: [
-                  const Text('баланс: '),
-                  Text('$totalBalance', style: const TextStyle(fontSize: 20)),
-                ],
-              ),
-
-              const SizedBox(height: 40),
-
-              // Tab bar Income/Expense
-              DefaultTabController(
-                length: 2,
-                initialIndex: 1,
-                child: TabBar(
-                  tabs: const [
-                    Text('Income', style: TextStyle(fontSize: 20)),
-                    Text(
-                      'Expense',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                  onTap: (index) {
-                    setState(() {
-                      selectedTransactionType = index == 0
-                          ? TransactionType.income
-                          : TransactionType.expense;
-                    });
-                  },
-                ),
-              ),
-
-              const SizedBox(height: 40),
-
-              SizedBox(
-                height: 96,
-                child: Center(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
+                  Expanded(
                     child: Text(
-                      _amountLabel,
-                      maxLines: 1,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 56,
-                        fontWeight: FontWeight.w600,
-                        color: selectedTransactionType == TransactionType.income
-                            ? Colors.green
-                            : Colors.red,
+                      'Create Transaction',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
-              const SizedBox(height: 16),
-
-              // Amount keyboard
-              Expanded(child: Center(child: AmountKeyboard(onTap: _onKeyTap))),
-
-              const SizedBox(height: 12),
-
-              // Submit transaction
-              GestureDetector(
-                onTap: !_canSubmit
-                    ? null
-                    : () async {
-                        final value = _parsedAmount;
-
-                        if (selectedTransactionType == TransactionType.income) {
-                          await _createAndRefresh(
-                            value: value,
-                            type: selectedTransactionType,
-                            category: Category(
-                              id: DateTime.now().microsecondsSinceEpoch.toString(),
-                              name: 'salary',
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Card(
+                      elevation: 2,
+                      shadowColor: Colors.black26,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Current amount',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
                             ),
-                          );
-                          if (context.mounted) {
-                            setState(() {
-                              amount = '0';
-                            });
-                          }
-                          if (!context.mounted) return;
-                          if (Navigator.canPop(context)) {
-                            Navigator.pop(context);
-                          }
-                        } else {
-                          final selectedCategory =
-                              await _showExpenseCategoryModal();
-                          if (selectedCategory == null) return;
-
-                          await _createAndRefresh(
-                            value: value,
-                            type: selectedTransactionType,
-                            category: selectedCategory,
-                          );
-                          if (context.mounted) {
-                            setState(() {
-                              amount = '0';
-                            });
-                          }
-                          if (!context.mounted) return;
-                          if (Navigator.canPop(context)) {
-                            Navigator.pop(context);
-                          }
-                        }
+                            const SizedBox(height: 8),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                _amountDisplay,
+                                maxLines: 1,
+                                style: theme.textTheme.displaySmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: amountColor,
+                                  letterSpacing: -0.5,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SegmentedButton<TransactionType>(
+                      segments: const [
+                        ButtonSegment<TransactionType>(
+                          value: TransactionType.income,
+                          label: Text('Income'),
+                        ),
+                        ButtonSegment<TransactionType>(
+                          value: TransactionType.expense,
+                          label: Text('Expense'),
+                        ),
+                      ],
+                      selected: {selectedTransactionType},
+                      onSelectionChanged: (Set<TransactionType> next) {
+                        setState(() {
+                          selectedTransactionType = next.first;
+                        });
                       },
-                child: CircleAvatar(
-                  radius: 42,
-                  backgroundColor: !_canSubmit
-                      ? Colors.grey.shade300
-                      : Colors.green,
-                  child: const Icon(Icons.check, size: 42, color: Colors.white),
+                      style: SegmentedButton.styleFrom(
+                        selectedBackgroundColor:
+                            selectedTransactionType == TransactionType.expense
+                            ? colorScheme.error
+                            : colorScheme.primaryContainer,
+                        selectedForegroundColor:
+                            selectedTransactionType == TransactionType.expense
+                            ? colorScheme.onError
+                            : colorScheme.onPrimaryContainer,
+                        side: BorderSide(
+                          color: colorScheme.outline.withValues(alpha: 0.5),
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        visualDensity: VisualDensity.comfortable,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    AmountKeyboard(onTap: _onKeyTap),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: FilledButton(
+                onPressed: _canSubmit ? () => _submit(expenseCategories) : null,
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF29A36A),
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: colorScheme.surfaceContainerHighest,
+                  disabledForegroundColor: colorScheme.onSurfaceVariant,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+                child: const Text(
+                  'Continue',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

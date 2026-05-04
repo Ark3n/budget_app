@@ -1,6 +1,8 @@
 import 'package:budget_app/features/budget/data/datasource/local_datasource.dart';
 import 'package:budget_app/features/budget/data/models/category_model.dart';
 import 'package:budget_app/features/budget/data/models/transaction_model.dart';
+import 'package:budget_app/features/budget/domain/budget_defaults.dart';
+import 'package:budget_app/features/budget/domain/exceptions/insufficient_balance_exception.dart';
 import 'package:budget_app/features/budget/domain/entities/transaction.dart';
 import 'package:budget_app/features/budget/domain/repository/account_repository.dart';
 import 'package:budget_app/features/budget/domain/repository/transaction_repository.dart';
@@ -9,6 +11,13 @@ class TransactionRepoImp implements TransactionRepository {
   final LocalDatasource _local;
   final AccountRepository _account;
   TransactionRepoImp(this._local, this._account);
+
+  void _requireNonNegativeBalance(double balance) {
+    if (balance < 0) {
+      throw const InsufficientBalanceException();
+    }
+  }
+
   // helper func: apply transaction to balance
   double _applyTransaction({
     required double balance,
@@ -47,6 +56,7 @@ class TransactionRepoImp implements TransactionRepository {
       type: transaction.type,
       amount: transaction.amount,
     );
+    _requireNonNegativeBalance(newBalance);
     await _account.updateAccount(transaction.accountId, newBalance);
     await _local.saveTransaction(TransactionModel.fromEntity(transaction));
   }
@@ -61,6 +71,7 @@ class TransactionRepoImp implements TransactionRepository {
       type: transaction.type,
       amount: transaction.amount,
     );
+    _requireNonNegativeBalance(newBalance);
     await _account.updateAccount(transaction.accountId, newBalance);
     await _local.deleteTransaction(TransactionModel.fromEntity(transaction));
   }
@@ -111,6 +122,7 @@ class TransactionRepoImp implements TransactionRepository {
         type: transaction.type,
         amount: transaction.amount,
       );
+      _requireNonNegativeBalance(newBalance);
       await _account.updateAccount(transaction.accountId, newBalance);
     } else {
       final oldAccount = await _account.getAccount(previousEntity.accountId);
@@ -130,10 +142,22 @@ class TransactionRepoImp implements TransactionRepository {
         amount: transaction.amount,
       );
 
+      _requireNonNegativeBalance(oldAccountBalance);
+      _requireNonNegativeBalance(newAccountBalance);
+
       await _account.updateAccount(previousEntity.accountId, oldAccountBalance);
       await _account.updateAccount(transaction.accountId, newAccountBalance);
     }
 
     await _local.saveTransaction(TransactionModel.fromEntity(transaction));
+  }
+
+  @override
+  Future<void> deleteAllTransactions() async {
+    await _local.clearAllTransactions();
+    await _account.updateAccount(
+      BudgetDefaults.defaultAccountId,
+      BudgetDefaults.initialAccountBalance,
+    );
   }
 }

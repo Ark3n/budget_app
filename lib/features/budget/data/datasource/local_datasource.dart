@@ -63,6 +63,12 @@ class LocalDatasource {
     return categoryModel;
   }
 
+  /// get all categories
+  Future<List<CategoryModel>> getCategories() async {
+    final box = await _categoryBox;
+    return box.values.toList();
+  }
+
   /// delete category
   Future<void> deleteCategory(CategoryModel category) async {
     final box = await _categoryBox;
@@ -102,5 +108,11 @@ class LocalDatasource {
   Future<void> deleteTransaction(TransactionModel model) async {
     final box = await _transactionBox;
     await box.delete(model.id);
+  }
+
+  /// Removes every transaction (e.g. settings “clear history”).
+  Future<void> clearAllTransactions() async {
+    final box = await _transactionBox;
+    await box.clear();
   }
 }
