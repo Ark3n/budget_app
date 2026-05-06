@@ -2,6 +2,7 @@ import 'package:budget_app/core/utils/budget_defaults.dart';
 import 'package:budget_app/features/budget/domain/entities/category.dart';
 import 'package:budget_app/features/budget/presentation/account/cubit/account_cubit.dart';
 import 'package:budget_app/features/budget/presentation/account/cubit/account_state.dart';
+import 'package:budget_app/features/budget/presentation/auth/cubit/auth_cubit.dart';
 import 'package:budget_app/features/budget/presentation/category/cubit/category_cubit.dart';
 import 'package:budget_app/features/budget/presentation/category/cubit/category_state.dart';
 import 'package:budget_app/features/budget/presentation/shared/budget_ui_tokens.dart';
@@ -334,6 +335,11 @@ class SettingsPage extends StatelessWidget {
     ).showSnackBar(const SnackBar(content: Text('Balance was reset.')));
   }
 
+  /// Signs out the current authenticated user.
+  Future<void> _onSignOut(BuildContext context) async {
+    await context.read<AuthCubit>().signOut();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -446,6 +452,33 @@ class SettingsPage extends StatelessWidget {
                               color: colorScheme.onSurfaceVariant,
                             ),
                             onTap: () => _onResetBalance(context),
+                          ),
+                          Divider(
+                            height: 1,
+                            indent: 20,
+                            endIndent: 20,
+                            color: colorScheme.outline.withValues(alpha: 0.3),
+                          ),
+                          ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 8,
+                            ),
+                            title: Text(
+                              'Sign out',
+                              style: TextStyle(color: colorScheme.error),
+                            ),
+                            subtitle: Text(
+                              'Sign out from this device.',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            trailing: Icon(
+                              Icons.chevron_right,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            onTap: () => _onSignOut(context),
                           ),
                         ],
                       ),

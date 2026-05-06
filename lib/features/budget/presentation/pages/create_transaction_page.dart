@@ -2,6 +2,7 @@ import 'package:budget_app/features/budget/domain/entities/category.dart';
 import 'package:budget_app/features/budget/domain/entities/transaction.dart';
 import 'package:budget_app/core/utils/id_generator.dart';
 import 'package:budget_app/features/budget/presentation/account/cubit/account_cubit.dart';
+import 'package:budget_app/features/budget/presentation/auth/cubit/auth_cubit.dart';
 import 'package:budget_app/features/budget/presentation/category/cubit/category_cubit.dart';
 import 'package:budget_app/features/budget/presentation/shared/budget_ui_tokens.dart';
 import 'package:budget_app/features/budget/presentation/shared/widgets/amount_keyboard.dart';
@@ -179,6 +180,11 @@ class _CreateTransactionPageState extends State<CreateTransactionPage> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
+                  ),
+                  IconButton(
+                    tooltip: 'Sign out',
+                    onPressed: () => context.read<AuthCubit>().signOut(),
+                    icon: const Icon(Icons.logout_rounded),
                   ),
                 ],
               ),
