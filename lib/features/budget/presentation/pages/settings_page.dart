@@ -1,10 +1,13 @@
-import 'package:budget_app/features/budget/domain/budget_defaults.dart';
+import 'package:budget_app/core/utils/budget_defaults.dart';
 import 'package:budget_app/features/budget/domain/entities/category.dart';
 import 'package:budget_app/features/budget/presentation/account/cubit/account_cubit.dart';
 import 'package:budget_app/features/budget/presentation/account/cubit/account_state.dart';
 import 'package:budget_app/features/budget/presentation/category/cubit/category_cubit.dart';
 import 'package:budget_app/features/budget/presentation/category/cubit/category_state.dart';
-import 'package:budget_app/features/budget/presentation/pages/widgets/category_icons.dart';
+import 'package:budget_app/features/budget/presentation/shared/budget_ui_tokens.dart';
+import 'package:budget_app/features/budget/presentation/shared/widgets/budget_card.dart';
+import 'package:budget_app/features/budget/presentation/shared/widgets/category_editor_sheet.dart';
+import 'package:budget_app/features/budget/presentation/shared/widgets/category_icons.dart';
 import 'package:budget_app/features/budget/presentation/transaction/cubit/transaction_cubit.dart';
 import 'package:budget_app/features/budget/presentation/transaction/cubit/transaction_state.dart';
 import 'package:flutter/material.dart';
@@ -14,21 +17,23 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
-  static const Color _brandGreen = Color(0xFF29A36A);
-
+  /// Keeps salary first, then sorts the rest alphabetically.
   static List<Category> _sortedCategories(List<Category> categories) {
     final list = List<Category>.from(categories);
     list.sort((a, b) {
       final aSalary =
-          a.name.toLowerCase() == CategoryCubit.salaryCategoryName.toLowerCase();
+          a.name.toLowerCase() ==
+          CategoryCubit.salaryCategoryName.toLowerCase();
       final bSalary =
-          b.name.toLowerCase() == CategoryCubit.salaryCategoryName.toLowerCase();
+          b.name.toLowerCase() ==
+          CategoryCubit.salaryCategoryName.toLowerCase();
       if (aSalary != bSalary) return aSalary ? -1 : 1;
       return a.name.toLowerCase().compareTo(b.name.toLowerCase());
     });
     return list;
   }
 
+  /// Shows a generic confirmation dialog for risky settings actions.
   static Future<bool> _confirm(
     BuildContext context, {
     required String title,
@@ -52,7 +57,9 @@ class SettingsPage extends StatelessWidget {
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(
-              backgroundColor: danger ? colorScheme.error : _brandGreen,
+              backgroundColor: danger
+                  ? colorScheme.error
+                  : BudgetUiTokens.brandGreen,
               foregroundColor: danger ? colorScheme.onError : Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(14),
@@ -66,213 +73,27 @@ class SettingsPage extends StatelessWidget {
     return result ?? false;
   }
 
+  /// Opens create/edit category sheet and persists the submitted values.
   static Future<void> _showCategoryEditor(
     BuildContext context, {
     Category? existing,
   }) async {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final nameController = TextEditingController(text: existing?.name ?? '');
-    var iconKey = existing?.icon ?? kCategoryPickerIcons.keys.first;
-    if (!kCategoryPickerIcons.containsKey(iconKey)) {
-      iconKey = kCategoryPickerIcons.keys.first;
-    }
-    var colorKey = existing?.color ?? kCategoryPickerColors.keys.first;
-    if (!kCategoryPickerColors.containsKey(colorKey)) {
-      colorKey = kCategoryPickerColors.keys.first;
-    }
-
-    final saved = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      clipBehavior: Clip.antiAlias,
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setLocalState) {
-            final media = MediaQuery.of(context);
-            final keyboardInset = media.viewInsets.bottom;
-            final viewport =
-                (media.size.height - keyboardInset - media.padding.top) * 0.9;
-            return Padding(
-              padding: EdgeInsets.only(bottom: keyboardInset),
-              child: SizedBox(
-                height: viewport.clamp(240.0, media.size.height * 0.95),
-                child: SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        existing == null ? 'New category' : 'Edit category',
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Category name',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: nameController,
-                        textCapitalization: TextCapitalization.sentences,
-                        decoration: InputDecoration(
-                          hintText: 'Example: Coffee',
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 12,
-                          ),
-                          filled: true,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide(
-                              color: colorScheme.outline.withValues(alpha: 0.6),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Icon',
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: kCategoryPickerIcons.entries.map((entry) {
-                          final selected = iconKey == entry.key;
-                          return FilterChip(
-                            label: Icon(entry.value, size: 18),
-                            selected: selected,
-                            showCheckmark: false,
-                            visualDensity: VisualDensity.compact,
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
-                            padding: const EdgeInsets.symmetric(horizontal: 2),
-                            labelPadding: EdgeInsets.zero,
-                            selectedColor: colorScheme.secondaryContainer,
-                            side: BorderSide(
-                              color: selected
-                                  ? Colors.transparent
-                                  : colorScheme.outline.withValues(alpha: 0.5),
-                            ),
-                            onSelected: (_) {
-                              setLocalState(() => iconKey = entry.key);
-                            },
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Color',
-                        style: theme.textTheme.labelLarge?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 10,
-                        runSpacing: 10,
-                        children: kCategoryPickerColors.entries.map((entry) {
-                          final selected = colorKey == entry.key;
-                          return FilterChip(
-                            label: SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: entry.value,
-                                  shape: BoxShape.circle,
-                                  border: selected
-                                      ? Border.all(
-                                          color: colorScheme.onSurface,
-                                          width: 2,
-                                        )
-                                      : null,
-                                ),
-                              ),
-                            ),
-                            selected: selected,
-                            showCheckmark: false,
-                            visualDensity: VisualDensity.compact,
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
-                            padding: const EdgeInsets.all(4),
-                            labelPadding: EdgeInsets.zero,
-                            selectedColor: colorScheme.secondaryContainer,
-                            side: BorderSide(
-                              color: selected
-                                  ? Colors.transparent
-                                  : colorScheme.outline.withValues(alpha: 0.4),
-                            ),
-                            onSelected: (_) {
-                              setLocalState(() => colorKey = entry.key);
-                            },
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 16),
-                      FilledButton(
-                        onPressed: () => Navigator.pop(sheetContext, true),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: _brandGreen,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                        ),
-                        child: Text(
-                          existing == null ? 'Create category' : 'Save changes',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-
-    if (saved != true || !context.mounted) return;
-    final name = nameController.text.trim();
-    if (name.isEmpty) return;
+    final result = await showCategoryEditorSheet(context, existing: existing);
+    if (result == null || !context.mounted) return;
 
     final cubit = context.read<CategoryCubit>();
     if (existing == null) {
       final created = await cubit.createCategory(
-        name,
-        icon: iconKey,
-        color: colorKey,
+        result.name,
+        icon: result.iconKey,
+        color: result.colorKey,
       );
       if (!context.mounted) return;
       if (created == null) {
         final err = cubit.state.error ?? 'Could not create category.';
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(err)));
       }
       return;
     }
@@ -280,9 +101,9 @@ class SettingsPage extends StatelessWidget {
     await cubit.updateCategory(
       Category(
         id: existing.id,
-        name: name,
-        icon: iconKey,
-        color: colorKey,
+        name: result.name,
+        icon: result.iconKey,
+        color: result.colorKey,
       ),
     );
     if (!context.mounted) return;
@@ -295,6 +116,7 @@ class SettingsPage extends StatelessWidget {
     }
   }
 
+  /// Confirms and deletes a category from settings.
   Future<void> _onDeleteCategory(BuildContext context, Category c) async {
     final ok = await _confirm(
       context,
@@ -309,6 +131,7 @@ class SettingsPage extends StatelessWidget {
     await context.read<CategoryCubit>().deleteCategory(c.id);
   }
 
+  /// Displays category management in a draggable bottom sheet.
   Future<void> _showCategoriesSheet(BuildContext context) async {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -361,75 +184,69 @@ class SettingsPage extends StatelessWidget {
                           return ListView.separated(
                             controller: scrollController,
                             itemCount: items.length,
-                            separatorBuilder: (_, _) => const SizedBox(height: 12),
+                            separatorBuilder: (_, _) =>
+                                const SizedBox(height: 12),
                             itemBuilder: (context, i) {
                               final c = items[i];
-                              return Card(
-                                elevation: 2,
-                                shadowColor: Colors.black26,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
+                              return BudgetCard(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
                                 ),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      CircleAvatar(
-                                        radius: 22,
-                                        backgroundColor: categoryColorFor(
-                                          c.color,
-                                        ).withValues(alpha: 0.2),
-                                        child: Icon(
-                                          categoryIconFrom(c),
-                                          color: categoryColorFor(c.color),
-                                          size: 22,
-                                        ),
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 22,
+                                      backgroundColor: categoryColorFor(
+                                        c.color,
+                                      ).withValues(alpha: 0.2),
+                                      child: Icon(
+                                        categoryIconFrom(c),
+                                        color: categoryColorFor(c.color),
+                                        size: 22,
                                       ),
-                                      const SizedBox(width: 14),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              c.name,
-                                              style: theme.textTheme.titleMedium
-                                                  ?.copyWith(
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              '${c.icon ?? "—"} · ${c.color ?? "—"}',
-                                              style: theme.textTheme.bodySmall
-                                                  ?.copyWith(
-                                                    color: colorScheme
-                                                        .onSurfaceVariant,
-                                                  ),
-                                            ),
-                                          ],
-                                        ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            c.name,
+                                            style: theme.textTheme.titleMedium
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '${c.icon ?? "—"} · ${c.color ?? "—"}',
+                                            style: theme.textTheme.bodySmall
+                                                ?.copyWith(
+                                                  color: colorScheme
+                                                      .onSurfaceVariant,
+                                                ),
+                                          ),
+                                        ],
                                       ),
-                                      IconButton(
-                                        icon: const Icon(Icons.edit_outlined),
-                                        onPressed: () => _showCategoryEditor(
-                                          context,
-                                          existing: c,
-                                        ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.edit_outlined),
+                                      onPressed: () => _showCategoryEditor(
+                                        context,
+                                        existing: c,
                                       ),
-                                      IconButton(
-                                        icon: Icon(
-                                          Icons.delete_outline,
-                                          color: colorScheme.error,
-                                        ),
-                                        onPressed: () =>
-                                            _onDeleteCategory(context, c),
+                                    ),
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.delete_outline,
+                                        color: colorScheme.error,
                                       ),
-                                    ],
-                                  ),
+                                      onPressed: () =>
+                                          _onDeleteCategory(context, c),
+                                    ),
+                                  ],
                                 ),
                               );
                             },
@@ -443,7 +260,7 @@ class SettingsPage extends StatelessWidget {
                       icon: const Icon(Icons.add, color: Colors.white),
                       label: const Text('Add category'),
                       style: FilledButton.styleFrom(
-                        backgroundColor: _brandGreen,
+                        backgroundColor: BudgetUiTokens.brandGreen,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
@@ -461,6 +278,7 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
+  /// Confirms destructive history clear and reloads account balance.
   Future<void> _onClearHistory(BuildContext context) async {
     final ok = await _confirm(
       context,
@@ -478,9 +296,7 @@ class SettingsPage extends StatelessWidget {
     final txState = context.read<TransactionCubit>().state;
     if (txState.status == TransactionStatus.failure) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(txState.error ?? 'Could not clear history.'),
-        ),
+        SnackBar(content: Text(txState.error ?? 'Could not clear history.')),
       );
       return;
     }
@@ -491,6 +307,7 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
+  /// Resets main account balance to default without touching transactions.
   Future<void> _onResetBalance(BuildContext context) async {
     final ok = await _confirm(
       context,
@@ -508,15 +325,13 @@ class SettingsPage extends StatelessWidget {
     final accState = context.read<AccountCubit>().state;
     if (accState.status == AccountStatus.failure) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(accState.error ?? 'Could not reset balance.'),
-        ),
+        SnackBar(content: Text(accState.error ?? 'Could not reset balance.')),
       );
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Balance was reset.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Balance was reset.')));
   }
 
   @override
@@ -552,12 +367,8 @@ class SettingsPage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Card(
-                      elevation: 2,
-                      shadowColor: Colors.black26,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
+                    BudgetCard(
+                      padding: EdgeInsets.zero,
                       child: ListTile(
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 20,
@@ -586,12 +397,8 @@ class SettingsPage extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Card(
-                      elevation: 2,
-                      shadowColor: Colors.black26,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
+                    BudgetCard(
+                      padding: EdgeInsets.zero,
                       child: Column(
                         children: [
                           ListTile(

@@ -1,5 +1,5 @@
 import 'package:budget_app/features/budget/domain/entities/transaction.dart';
-import 'package:budget_app/features/budget/domain/exceptions/insufficient_balance_exception.dart';
+import 'package:budget_app/core/exceptions/insufficient_balance_exception.dart';
 import 'package:budget_app/features/budget/domain/repository/transaction_repository.dart';
 import 'package:budget_app/features/budget/presentation/transaction/cubit/transaction_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -20,6 +20,7 @@ class TransactionCubit extends Cubit<TransactionState> {
     await getTransactions();
   }
 
+  /// Maps low-level exceptions into user-friendly messages for the UI layer.
   static String _userFacingMessage(Object error) {
     if (error is InsufficientBalanceException) {
       return InsufficientBalanceException.userMessage;
@@ -31,7 +32,7 @@ class TransactionCubit extends Cubit<TransactionState> {
     return "We couldn’t save your change. Please try again.";
   }
 
-  // get transactions
+  /// Loads transactions from storage and keeps the newest entries first.
   Future<void> getTransactions() async {
     emit(
       state.copyWith(
@@ -62,7 +63,7 @@ class TransactionCubit extends Cubit<TransactionState> {
     }
   }
 
-  // create transaction
+  /// Persists a transaction, then refreshes the list to keep state in sync.
   Future<void> createTransaction(Transaction transaction) async {
     emit(
       state.copyWith(
@@ -86,29 +87,6 @@ class TransactionCubit extends Cubit<TransactionState> {
     }
   }
 
-  // update transaction
-  Future<void> updateTransaction(Transaction transaction) async {
-    emit(
-      state.copyWith(
-        status: TransactionStatus.loading,
-        error: null,
-        transaction: null,
-      ),
-    );
-    try {
-      await _transactionRepository.updateTransaction(transaction);
-      // Refresh list so UI reflects the updated transaction.
-      await getTransactions();
-    } catch (e) {
-      emit(
-        state.copyWith(
-          status: TransactionStatus.failure,
-          error: _userFacingMessage(e),
-        ),
-      );
-    }
-  }
-
   /// Clears every transaction and resets the default account balance.
   Future<void> deleteAllTransactions() async {
     emit(
@@ -120,29 +98,6 @@ class TransactionCubit extends Cubit<TransactionState> {
     );
     try {
       await _transactionRepository.deleteAllTransactions();
-      await getTransactions();
-    } catch (e) {
-      emit(
-        state.copyWith(
-          status: TransactionStatus.failure,
-          error: _userFacingMessage(e),
-        ),
-      );
-    }
-  }
-
-  // delete transaction
-  Future<void> deleteTransaction(Transaction transaction) async {
-    emit(
-      state.copyWith(
-        status: TransactionStatus.loading,
-        error: null,
-        transaction: null,
-      ),
-    );
-    try {
-      await _transactionRepository.deleteTransaction(transaction);
-      // Refresh list so UI reflects the deleted transaction.
       await getTransactions();
     } catch (e) {
       emit(

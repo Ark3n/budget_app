@@ -1,14 +1,18 @@
 import 'package:budget_app/features/budget/domain/entities/category.dart';
 import 'package:budget_app/features/budget/domain/entities/transaction.dart';
+import 'package:budget_app/core/utils/id_generator.dart';
 import 'package:budget_app/features/budget/presentation/account/cubit/account_cubit.dart';
 import 'package:budget_app/features/budget/presentation/category/cubit/category_cubit.dart';
-import 'package:budget_app/features/budget/presentation/pages/widgets/amount_keyboard.dart';
-import 'package:budget_app/features/budget/presentation/pages/widgets/select_category_bottom_sheet.dart';
+import 'package:budget_app/features/budget/presentation/shared/budget_ui_tokens.dart';
+import 'package:budget_app/features/budget/presentation/shared/widgets/amount_keyboard.dart';
+import 'package:budget_app/features/budget/presentation/shared/widgets/budget_card.dart';
+import 'package:budget_app/features/budget/presentation/shared/widgets/select_category_bottom_sheet.dart';
 import 'package:budget_app/features/budget/presentation/transaction/cubit/transaction_cubit.dart';
 import 'package:budget_app/features/budget/presentation/transaction/cubit/transaction_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+/// Transaction entry screen with amount keypad and type selection.
 class CreateTransactionPage extends StatefulWidget {
   const CreateTransactionPage({super.key});
 
@@ -17,6 +21,8 @@ class CreateTransactionPage extends StatefulWidget {
 }
 
 class _CreateTransactionPageState extends State<CreateTransactionPage> {
+  static const IdGenerator _idGenerator = TimestampIdGenerator();
+
   TransactionType selectedTransactionType = TransactionType.expense;
   String amount = '0';
   double get _parsedAmount => double.tryParse(amount) ?? 0;
@@ -28,6 +34,7 @@ class _CreateTransactionPageState extends State<CreateTransactionPage> {
     return '$sign\$$amount';
   }
 
+  /// Creates the transaction and refreshes account totals after a success.
   Future<void> _createAndRefresh({
     required double value,
     required TransactionType type,
@@ -36,7 +43,7 @@ class _CreateTransactionPageState extends State<CreateTransactionPage> {
     final transactionCubit = context.read<TransactionCubit>();
     await transactionCubit.createTransaction(
       Transaction(
-        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        id: _idGenerator.nextId(),
         userId: 'me',
         amount: value,
         type: type,
@@ -74,6 +81,7 @@ class _CreateTransactionPageState extends State<CreateTransactionPage> {
     await context.read<AccountCubit>().loadAccounts();
   }
 
+  /// Submits either income (salary) or expense with selected category.
   Future<void> _submit(List<Category> expenseCategories) async {
     if (!_canSubmit) return;
     final value = _parsedAmount;
@@ -111,6 +119,7 @@ class _CreateTransactionPageState extends State<CreateTransactionPage> {
     if (Navigator.canPop(context)) Navigator.pop(context);
   }
 
+  /// Handles numeric keypad interactions, including decimal and backspace.
   void _onKeyTap(String value) {
     setState(() {
       if (value == '.') {
@@ -151,7 +160,7 @@ class _CreateTransactionPageState extends State<CreateTransactionPage> {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final amountColor = selectedTransactionType == TransactionType.income
-        ? colorScheme.primary
+        ? BudgetUiTokens.brandGreen
         : colorScheme.error;
 
     return Scaffold(
@@ -180,39 +189,31 @@ class _CreateTransactionPageState extends State<CreateTransactionPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Card(
-                      elevation: 2,
-                      shadowColor: Colors.black26,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Current amount',
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
+                    BudgetCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Current amount',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              _amountDisplay,
+                              maxLines: 1,
+                              style: theme.textTheme.displaySmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: amountColor,
+                                letterSpacing: -0.5,
                               ),
                             ),
-                            const SizedBox(height: 8),
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                _amountDisplay,
-                                maxLines: 1,
-                                style: theme.textTheme.displaySmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: amountColor,
-                                  letterSpacing: -0.5,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -263,7 +264,7 @@ class _CreateTransactionPageState extends State<CreateTransactionPage> {
               child: FilledButton(
                 onPressed: _canSubmit ? () => _submit(expenseCategories) : null,
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF29A36A),
+                  backgroundColor: BudgetUiTokens.brandGreen,
                   foregroundColor: Colors.white,
                   disabledBackgroundColor: colorScheme.surfaceContainerHighest,
                   disabledForegroundColor: colorScheme.onSurfaceVariant,

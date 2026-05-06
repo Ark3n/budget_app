@@ -3,6 +3,7 @@ import 'package:budget_app/features/budget/presentation/pages/history_page.dart'
 import 'package:budget_app/features/budget/presentation/pages/settings_page.dart';
 import 'package:flutter/material.dart';
 
+/// Root tab container for add, history, and settings destinations.
 class MainTabPage extends StatefulWidget {
   const MainTabPage({super.key});
 
@@ -42,4 +43,3 @@ class _MainTabPageState extends State<MainTabPage> {
     );
   }
 }
-
