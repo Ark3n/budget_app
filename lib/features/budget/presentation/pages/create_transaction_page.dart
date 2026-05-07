@@ -42,10 +42,12 @@ class _CreateTransactionPageState extends State<CreateTransactionPage> {
     required Category category,
   }) async {
     final transactionCubit = context.read<TransactionCubit>();
+    final authUserId =
+        context.read<AuthCubit>().state.user?.id ?? '';
     await transactionCubit.createTransaction(
       Transaction(
         id: _idGenerator.nextId(),
-        userId: 'me',
+        userId: authUserId,
         amount: value,
         type: type,
         category: category,

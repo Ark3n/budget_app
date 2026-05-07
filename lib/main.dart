@@ -6,6 +6,7 @@ import 'package:budget_app/features/budget/data/repository/auth_repo_imp.dart';
 import 'package:budget_app/features/budget/data/repository/category_repo_imp.dart';
 import 'package:budget_app/features/budget/data/repository/transaction_repo_imp.dart';
 import 'package:budget_app/features/budget/presentation/account/cubit/account_cubit.dart';
+import 'package:budget_app/features/budget/presentation/analytics/cubit/analytics_cubit.dart';
 import 'package:budget_app/features/budget/presentation/auth/cubit/auth_cubit.dart';
 import 'package:budget_app/features/budget/presentation/auth/cubit/auth_state.dart';
 import 'package:budget_app/features/budget/presentation/pages/auth_page.dart';
@@ -42,30 +43,9 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    final localDatasource = LocalDatasource();
-    final remoteDatasource = RemoteDatasource(supabase.Supabase.instance.client);
-    final accountRepository = AccountRepoImp(localDatasource, remoteDatasource);
-    final categoryRepository = CategoryRepoImp(localDatasource, remoteDatasource);
     final authRepository = AuthRepoImp(supabase.Supabase.instance.client);
-    final transactionRepository = TransactionRepoImp(
-      localDatasource,
-      accountRepository,
-      remoteDatasource,
-    );
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(create: (_) => AuthCubit(authRepository)),
-        BlocProvider(
-          create: (_) => AccountCubit(accountRepository)..initialize(),
-        ),
-        BlocProvider(
-          create: (_) =>
-              TransactionCubit(transactionRepository)..getTransactions(),
-        ),
-        BlocProvider(
-          create: (_) => CategoryCubit(categoryRepository)..initialize(),
-        ),
-      ],
+    return BlocProvider(
+      create: (_) => AuthCubit(authRepository),
       child: MaterialApp(
         title: 'Flutter Demo',
         theme: ThemeData(
@@ -84,11 +64,56 @@ class _AppAuthGate extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<AuthCubit, AuthState>(
       builder: (context, state) {
-        if (state.status == AuthStatus.authenticated) {
-          return const MainTabPage();
+        final user = state.user;
+        if (state.status == AuthStatus.authenticated && user != null) {
+          return _AuthenticatedSessionScope(userId: user.id);
         }
         return const AuthPage();
       },
+    );
+  }
+}
+
+/// Budget repositories and cubits are created per signed-in user so Hive stays isolated.
+class _AuthenticatedSessionScope extends StatelessWidget {
+  const _AuthenticatedSessionScope({required this.userId});
+
+  final String userId;
+
+  @override
+  Widget build(BuildContext context) {
+    final localDatasource = LocalDatasource(userId: userId);
+    final remoteDatasource = RemoteDatasource(
+      supabase.Supabase.instance.client,
+    );
+    final accountRepository = AccountRepoImp(localDatasource, remoteDatasource);
+    final categoryRepository = CategoryRepoImp(
+      localDatasource,
+      remoteDatasource,
+    );
+    final transactionRepository = TransactionRepoImp(
+      localDatasource,
+      accountRepository,
+      remoteDatasource,
+    );
+
+    return MultiBlocProvider(
+      key: ValueKey(userId),
+      providers: [
+        BlocProvider(
+          create: (_) =>
+              AccountCubit(accountRepository, authUserId: userId)..initialize(),
+        ),
+        BlocProvider(
+          create: (_) =>
+              TransactionCubit(transactionRepository)..getTransactions(),
+        ),
+        BlocProvider(
+          create: (_) => CategoryCubit(categoryRepository)..initialize(),
+        ),
+        BlocProvider(create: (_) => AnalyticsCubit()),
+      ],
+      child: const MainTabPage(),
     );
   }
 }

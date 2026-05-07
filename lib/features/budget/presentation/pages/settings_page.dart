@@ -3,6 +3,7 @@ import 'package:budget_app/features/budget/domain/entities/category.dart';
 import 'package:budget_app/features/budget/presentation/account/cubit/account_cubit.dart';
 import 'package:budget_app/features/budget/presentation/account/cubit/account_state.dart';
 import 'package:budget_app/features/budget/presentation/auth/cubit/auth_cubit.dart';
+import 'package:budget_app/features/budget/presentation/auth/cubit/auth_state.dart';
 import 'package:budget_app/features/budget/presentation/category/cubit/category_cubit.dart';
 import 'package:budget_app/features/budget/presentation/category/cubit/category_state.dart';
 import 'package:budget_app/features/budget/presentation/shared/budget_ui_tokens.dart';
@@ -136,6 +137,7 @@ class SettingsPage extends StatelessWidget {
   Future<void> _showCategoriesSheet(BuildContext context) async {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final categoryCubit = context.read<CategoryCubit>();
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -145,134 +147,137 @@ class SettingsPage extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (sheetContext) {
-        return SafeArea(
-          child: DraggableScrollableSheet(
-            expand: false,
-            initialChildSize: 0.85,
-            minChildSize: 0.5,
-            maxChildSize: 0.95,
-            builder: (context, scrollController) {
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      'Categories',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Expanded(
-                      child: BlocBuilder<CategoryCubit, CategoryState>(
-                        builder: (context, state) {
-                          if (state.status == CategoryStatus.loading &&
-                              state.categories.isEmpty) {
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
-                          }
-                          if (state.status == CategoryStatus.failure &&
-                              state.categories.isEmpty) {
-                            return Center(
-                              child: Text(
-                                state.error ?? 'Could not load categories',
-                              ),
-                            );
-                          }
-                          final items = _sortedCategories(state.categories);
-                          return ListView.separated(
-                            controller: scrollController,
-                            itemCount: items.length,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(height: 12),
-                            itemBuilder: (context, i) {
-                              final c = items[i];
-                              return BudgetCard(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                child: Row(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 22,
-                                      backgroundColor: categoryColorFor(
-                                        c.color,
-                                      ).withValues(alpha: 0.2),
-                                      child: Icon(
-                                        categoryIconFrom(c),
-                                        color: categoryColorFor(c.color),
-                                        size: 22,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 14),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            c.name,
-                                            style: theme.textTheme.titleMedium
-                                                ?.copyWith(
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            '${c.icon ?? "—"} · ${c.color ?? "—"}',
-                                            style: theme.textTheme.bodySmall
-                                                ?.copyWith(
-                                                  color: colorScheme
-                                                      .onSurfaceVariant,
-                                                ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.edit_outlined),
-                                      onPressed: () => _showCategoryEditor(
-                                        context,
-                                        existing: c,
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.delete_outline,
-                                        color: colorScheme.error,
-                                      ),
-                                      onPressed: () =>
-                                          _onDeleteCategory(context, c),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    FilledButton.icon(
-                      onPressed: () => _showCategoryEditor(context),
-                      icon: const Icon(Icons.add, color: Colors.white),
-                      label: const Text('Add category'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: BudgetUiTokens.brandGreen,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
+        return BlocProvider.value(
+          value: categoryCubit,
+          child: SafeArea(
+            child: DraggableScrollableSheet(
+              expand: false,
+              initialChildSize: 0.85,
+              minChildSize: 0.5,
+              maxChildSize: 0.95,
+              builder: (context, scrollController) {
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Categories',
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              );
-            },
+                      const SizedBox(height: 12),
+                      Expanded(
+                        child: BlocBuilder<CategoryCubit, CategoryState>(
+                          builder: (context, state) {
+                            if (state.status == CategoryStatus.loading &&
+                                state.categories.isEmpty) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            }
+                            if (state.status == CategoryStatus.failure &&
+                                state.categories.isEmpty) {
+                              return Center(
+                                child: Text(
+                                  state.error ?? 'Could not load categories',
+                                ),
+                              );
+                            }
+                            final items = _sortedCategories(state.categories);
+                            return ListView.separated(
+                              controller: scrollController,
+                              itemCount: items.length,
+                              separatorBuilder: (_, _) =>
+                                  const SizedBox(height: 12),
+                              itemBuilder: (context, i) {
+                                final c = items[i];
+                                return BudgetCard(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 22,
+                                        backgroundColor: categoryColorFor(
+                                          c.color,
+                                        ).withValues(alpha: 0.2),
+                                        child: Icon(
+                                          categoryIconFrom(c),
+                                          color: categoryColorFor(c.color),
+                                          size: 22,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              c.name,
+                                              style: theme.textTheme.titleMedium
+                                                  ?.copyWith(
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              '${c.icon ?? "—"} · ${c.color ?? "—"}',
+                                              style: theme.textTheme.bodySmall
+                                                  ?.copyWith(
+                                                    color: colorScheme
+                                                        .onSurfaceVariant,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.edit_outlined),
+                                        onPressed: () => _showCategoryEditor(
+                                          context,
+                                          existing: c,
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: Icon(
+                                          Icons.delete_outline,
+                                          color: colorScheme.error,
+                                        ),
+                                        onPressed: () =>
+                                            _onDeleteCategory(context, c),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      FilledButton.icon(
+                        onPressed: () => _showCategoryEditor(context),
+                        icon: const Icon(Icons.add, color: Colors.white),
+                        label: const Text('Add category'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: BudgetUiTokens.brandGreen,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         );
       },
@@ -366,6 +371,96 @@ class SettingsPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
+                      'Account',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    BudgetCard(
+                      child: BlocBuilder<AuthCubit, AuthState>(
+                        builder: (context, authState) {
+                          final user = authState.user;
+                          final displayName =
+                              user?.name?.trim().isNotEmpty == true
+                              ? user!.name!.trim()
+                              : (user?.username ?? 'Unknown user');
+                          final email = user?.email ?? 'No email';
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 20,
+                                    backgroundColor: BudgetUiTokens.brandGreen
+                                        .withValues(alpha: 0.18),
+                                    child: Text(
+                                      displayName.isEmpty
+                                          ? '?'
+                                          : displayName[0].toUpperCase(),
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                            color: BudgetUiTokens.brandGreen,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          displayName,
+                                          style: theme.textTheme.titleMedium
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          email,
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                                color: colorScheme
+                                                    .onSurfaceVariant,
+                                              ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton.icon(
+                                  onPressed: () => _onSignOut(context),
+                                  icon: const Icon(Icons.logout),
+                                  label: const Text('Sign out'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: colorScheme.error,
+                                    side: BorderSide(color: colorScheme.error),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    Text(
                       'Manage',
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
@@ -458,27 +553,6 @@ class SettingsPage extends StatelessWidget {
                             indent: 20,
                             endIndent: 20,
                             color: colorScheme.outline.withValues(alpha: 0.3),
-                          ),
-                          ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 8,
-                            ),
-                            title: Text(
-                              'Sign out',
-                              style: TextStyle(color: colorScheme.error),
-                            ),
-                            subtitle: Text(
-                              'Sign out from this device.',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            trailing: Icon(
-                              Icons.chevron_right,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            onTap: () => _onSignOut(context),
                           ),
                         ],
                       ),

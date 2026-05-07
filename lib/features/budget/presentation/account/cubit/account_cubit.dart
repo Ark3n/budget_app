@@ -1,4 +1,4 @@
-import 'package:budget_app/features/budget/domain/budget_defaults.dart';
+import 'package:budget_app/core/utils/budget_defaults.dart';
 import 'package:budget_app/features/budget/domain/entities/account.dart';
 import 'package:budget_app/features/budget/domain/repository/account_repository.dart';
 import 'package:budget_app/features/budget/presentation/account/cubit/account_state.dart';
@@ -11,12 +11,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 /// - failure: account operation failed
 class AccountCubit extends Cubit<AccountState> {
   static String get defaultAccountId => BudgetDefaults.defaultAccountId;
-  static const String defaultUserId = 'local_user';
   static const String defaultAccountName = 'Salary';
 
   final AccountRepository _accountRepository;
+  final String _authUserId;
 
-  AccountCubit(this._accountRepository) : super(const AccountState());
+  AccountCubit(this._accountRepository, {required String authUserId})
+    : _authUserId = authUserId,
+      super(const AccountState());
 
   Future<void> initialize() async {
     emit(state.copyWith(status: AccountStatus.loading, error: null));
@@ -87,7 +89,7 @@ class AccountCubit extends Cubit<AccountState> {
     await _accountRepository.saveAccount(
       Account(
         id: defaultAccountId,
-        userId: defaultUserId,
+        userId: _authUserId,
         name: defaultAccountName,
         balance: BudgetDefaults.initialAccountBalance,
         icon: null,

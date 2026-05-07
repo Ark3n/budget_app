@@ -11,18 +11,24 @@ import 'package:hive_ce/hive.dart';
 /// U -> update category
 /// D -> delete one category, delete all categories
 
+/// Hive storage scoped per Supabase auth user so data is not shared between logins.
 class LocalDatasource {
-  static const String _category = 'category';
-  static const String _transaction = 'transaction';
-  static const String _account = 'account';
+  LocalDatasource({required String userId})
+    : _boxSuffix = userId.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
+
+  final String _boxSuffix;
+
+  String get _categoryName => 'category_$_boxSuffix';
+  String get _transactionName => 'transaction_$_boxSuffix';
+  String get _accountName => 'account_$_boxSuffix';
 
   Future<Box<CategoryModel>> get _categoryBox async =>
-      Hive.openBox<CategoryModel>(_category);
+      Hive.openBox<CategoryModel>(_categoryName);
 
   Future<Box<TransactionModel>> get _transactionBox async =>
-      Hive.openBox<TransactionModel>(_transaction);
+      Hive.openBox<TransactionModel>(_transactionName);
   Future<Box<AccountModel>> get _accountBox =>
-      Hive.openBox<AccountModel>(_account);
+      Hive.openBox<AccountModel>(_accountName);
 
   // MARK: - ACCOUNT
   /// save account
@@ -96,18 +102,6 @@ class LocalDatasource {
   Future<void> saveTransaction(TransactionModel model) async {
     final box = await _transactionBox;
     await box.put(model.id, model);
-  }
-
-  /// get transaction by id
-  Future<TransactionModel?> getTransaction(String id) async {
-    final box = await _transactionBox;
-    return box.get(id);
-  }
-
-  /// delete transaction
-  Future<void> deleteTransaction(TransactionModel model) async {
-    final box = await _transactionBox;
-    await box.delete(model.id);
   }
 
   /// Removes every transaction (e.g. settings “clear history”).

@@ -14,6 +14,7 @@ Future<Category?> showSelectCategorySheet(
   List<Category> categories,
 ) {
   if (categories.isEmpty) return Future<Category?>.value(null);
+  final categoryCubit = context.read<CategoryCubit>();
 
   return showModalBottomSheet<Category>(
     context: context,
@@ -24,8 +25,10 @@ Future<Category?> showSelectCategorySheet(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
     clipBehavior: Clip.antiAlias,
-    builder: (sheetContext) =>
-        _SelectCategorySheetContent(categories: categories),
+    builder: (sheetContext) => BlocProvider.value(
+      value: categoryCubit,
+      child: _SelectCategorySheetContent(categories: categories),
+    ),
   );
 }
 
