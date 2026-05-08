@@ -57,16 +57,7 @@ class TransactionRepoImp implements TransactionRepository {
   @override
   Future<List<Transaction>> getTransactions() async {
     try {
-      var result = await _local.getTransactions();
-      if (result.isEmpty && _remote != null && _remote.currentUserId != null) {
-        try {
-          final remoteTransactions = await _remote.getTransactions();
-          for (final item in remoteTransactions) {
-            await _local.saveTransaction(item);
-          }
-          result = await _local.getTransactions();
-        } catch (_) {}
-      }
+      final result = await _local.getTransactions();
 
       final transactions = await Future.wait(
         result.map((e) async {
@@ -89,12 +80,42 @@ class TransactionRepoImp implements TransactionRepository {
   @override
   Future<void> deleteAllTransactions() async {
     await _local.clearAllTransactions();
-    try {
-      await _remote?.clearTransactions();
-    } catch (_) {}
     await _account.updateAccount(
       BudgetDefaults.defaultAccountId,
       BudgetDefaults.initialAccountBalance,
     );
+  }
+
+  @override
+  Future<void> backupToCloud() async {
+    final remote = _remote;
+    if (remote == null) {
+      throw Exception('Cloud backup is not configured.');
+    }
+    if (remote.currentUserId == null) {
+      throw Exception('Please sign in to use cloud backup.');
+    }
+    final localItems = await _local.getTransactions();
+    for (final model in localItems) {
+      await remote.upsertTransaction(model);
+    }
+  }
+
+  @override
+  Future<void> restoreFromCloud({bool replaceLocal = true}) async {
+    final remote = _remote;
+    if (remote == null) {
+      throw Exception('Cloud backup is not configured.');
+    }
+    if (remote.currentUserId == null) {
+      throw Exception('Please sign in to restore from cloud backup.');
+    }
+    final remoteItems = await remote.getTransactions();
+    if (replaceLocal) {
+      await _local.clearAllTransactions();
+    }
+    for (final item in remoteItems) {
+      await _local.saveTransaction(item);
+    }
   }
 }

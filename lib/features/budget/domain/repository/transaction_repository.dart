@@ -4,6 +4,8 @@ abstract class TransactionRepository {
   Future<List<Transaction>> getTransactions();
   Future<void> createTransaction(Transaction transaction);
 
-  /// Clears all transactions and resets the default account balance to the app default.
+  /// Clears local transactions and resets the default account balance locally.
   Future<void> deleteAllTransactions();
+  Future<void> backupToCloud();
+  Future<void> restoreFromCloud({bool replaceLocal = true});
 }

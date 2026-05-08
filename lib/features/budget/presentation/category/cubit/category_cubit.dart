@@ -140,4 +140,14 @@ class CategoryCubit extends Cubit<CategoryState> {
       ),
     );
   }
+
+  Future<void> backupToCloud() async {
+    await _categoryRepository.backupToCloud();
+  }
+
+  Future<void> restoreFromCloud() async {
+    await _categoryRepository.restoreFromCloud(replaceLocal: true);
+    await loadCategories();
+    await ensureSalaryCategory();
+  }
 }

@@ -290,9 +290,9 @@ class SettingsPage extends StatelessWidget {
       context,
       title: 'Clear all history',
       message:
-          'This deletes every transaction and resets your main account '
-          'balance to \$${BudgetDefaults.initialAccountBalance.toStringAsFixed(2)}. '
-          'Categories are kept.',
+          'This clears local transaction history on this device and resets your '
+          'main account balance to \$${BudgetDefaults.initialAccountBalance.toStringAsFixed(2)}. '
+          'Cloud backup stays unchanged.',
       confirmLabel: 'Clear all',
       danger: true,
     );
@@ -309,8 +309,95 @@ class SettingsPage extends StatelessWidget {
     await context.read<AccountCubit>().loadAccounts();
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('All transactions were removed.')),
+      const SnackBar(content: Text('Local transactions were removed.')),
     );
+  }
+
+  /// Uploads current local data to cloud backup.
+  Future<void> _onBackupNow(BuildContext context) async {
+    final accountCubit = context.read<AccountCubit>();
+    final categoryCubit = context.read<CategoryCubit>();
+    final transactionCubit = context.read<TransactionCubit>();
+    final ok = await _confirm(
+      context,
+      title: 'Backup now',
+      message:
+          'Upload accounts, categories, and transactions from this device to '
+          'cloud backup?',
+      confirmLabel: 'Backup',
+    );
+    if (!ok || !context.mounted) return;
+
+    try {
+      await accountCubit.backupToCloud();
+      await categoryCubit.backupToCloud();
+      await transactionCubit.backupToCloud();
+      if (!context.mounted) return;
+      final txState = transactionCubit.state;
+      if (txState.status == TransactionStatus.failure) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(txState.error ?? 'Backup failed.')),
+        );
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Cloud backup completed.')));
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Backup failed: $e')));
+    }
+  }
+
+  /// Restores local data from cloud backup.
+  Future<void> _onRestoreFromCloud(BuildContext context) async {
+    final accountCubit = context.read<AccountCubit>();
+    final categoryCubit = context.read<CategoryCubit>();
+    final transactionCubit = context.read<TransactionCubit>();
+    final ok = await _confirm(
+      context,
+      title: 'Restore from cloud backup',
+      message:
+          'Replace local data on this device with your cloud backup? '
+          'This keeps cloud data unchanged.',
+      confirmLabel: 'Restore',
+      danger: true,
+    );
+    if (!ok || !context.mounted) return;
+
+    try {
+      await accountCubit.restoreFromCloud();
+      await categoryCubit.restoreFromCloud();
+      await transactionCubit.restoreFromCloud();
+      await accountCubit.loadAccounts();
+      await categoryCubit.loadCategories();
+      await transactionCubit.getTransactions();
+      if (!context.mounted) return;
+      final txState = transactionCubit.state;
+      if (txState.status == TransactionStatus.failure) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(txState.error ?? 'Restore failed.')),
+        );
+        return;
+      }
+      final restoredCount = txState.transactions.length;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            restoredCount == 0
+                ? 'Restore finished. No transactions found in cloud backup.'
+                : 'Restored $restoredCount transactions from cloud backup.',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Restore failed: $e')));
+    }
   }
 
   /// Resets main account balance to default without touching transactions.
@@ -507,9 +594,57 @@ class SettingsPage extends StatelessWidget {
                               horizontal: 20,
                               vertical: 8,
                             ),
+                            title: const Text('Backup now'),
+                            subtitle: Text(
+                              'Upload local data to cloud backup.',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            trailing: Icon(
+                              Icons.chevron_right,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            onTap: () => _onBackupNow(context),
+                          ),
+                          Divider(
+                            height: 1,
+                            indent: 20,
+                            endIndent: 20,
+                            color: colorScheme.outline.withValues(alpha: 0.3),
+                          ),
+                          ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 8,
+                            ),
+                            title: const Text('Restore from cloud backup'),
+                            subtitle: Text(
+                              'Replace local data with cloud backup.',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                            trailing: Icon(
+                              Icons.chevron_right,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                            onTap: () => _onRestoreFromCloud(context),
+                          ),
+                          Divider(
+                            height: 1,
+                            indent: 20,
+                            endIndent: 20,
+                            color: colorScheme.outline.withValues(alpha: 0.3),
+                          ),
+                          ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 8,
+                            ),
                             title: const Text('Clear all history'),
                             subtitle: Text(
-                              'Delete every transaction and reset balance to '
+                              'Clear local transactions and reset balance to '
                               '\$${BudgetDefaults.initialAccountBalance.toStringAsFixed(2)}.',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: colorScheme.onSurfaceVariant,

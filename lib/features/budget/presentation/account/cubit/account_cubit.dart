@@ -98,4 +98,13 @@ class AccountCubit extends Cubit<AccountState> {
       ),
     );
   }
+
+  Future<void> backupToCloud() async {
+    await _accountRepository.backupToCloud();
+  }
+
+  Future<void> restoreFromCloud() async {
+    await _accountRepository.restoreFromCloud(replaceLocal: true);
+    await loadAccounts();
+  }
 }

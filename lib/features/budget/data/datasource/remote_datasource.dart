@@ -34,7 +34,11 @@ class RemoteDatasource {
   Future<void> deleteAccount(String id) async {
     final userId = currentUserId;
     if (userId == null) return;
-    await _client.from(_accountsTable).delete().eq('id', id).eq('user_id', userId);
+    await _client
+        .from(_accountsTable)
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId);
   }
 
   Future<List<AccountModel>> getAccounts() async {
@@ -45,9 +49,20 @@ class RemoteDatasource {
         .select()
         .eq('user_id', userId)
         .order('created_at');
-    return (rows as List<dynamic>)
-        .map((row) => AccountModel.fromJson(Map<String, dynamic>.from(row)))
-        .toList();
+    return (rows as List<dynamic>).map((row) {
+      final json = Map<String, dynamic>.from(row);
+      return AccountModel(
+        id: (json['id'] as String?) ?? '',
+        userId: (json['user_id'] as String?) ?? userId,
+        name: (json['name'] as String?) ?? 'Main account',
+        balance: (json['balance'] as num?)?.toDouble() ?? 0,
+        icon: json['icon'] as String?,
+        color: json['color'] as String?,
+        createdAt:
+            DateTime.tryParse(json['created_at'] as String? ?? '') ??
+            DateTime.now(),
+      );
+    }).toList();
   }
 
   Future<void> upsertCategory(CategoryModel model) async {

@@ -4,6 +4,7 @@ import 'package:budget_app/features/budget/presentation/shared/budget_ui_tokens.
 import 'package:budget_app/features/budget/presentation/shared/widgets/budget_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:lottie/lottie.dart';
 
 /// Auth screen with register/login mode toggle.
 class AuthPage extends StatefulWidget {
@@ -70,6 +71,15 @@ class _AuthPageState extends State<AuthPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                          SizedBox(
+                            height: 180,
+                            child: Lottie.asset(
+                              'assets/lottie/expo_logic_event_budget_hero.json',
+                              fit: BoxFit.contain,
+                              repeat: true,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
                           Text(
                             title,
                             style: theme.textTheme.headlineSmall?.copyWith(

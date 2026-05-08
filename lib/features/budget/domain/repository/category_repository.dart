@@ -5,4 +5,6 @@ abstract class CategoryRepository {
   Future<Category?> getCategory(String id);
   Future<void> saveCategory(Category category);
   Future<void> deleteCategory(String id);
+  Future<void> backupToCloud();
+  Future<void> restoreFromCloud({bool replaceLocal = true});
 }

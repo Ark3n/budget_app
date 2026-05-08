@@ -51,4 +51,37 @@ class CategoryRepoImp implements CategoryRepository {
       await _remoteDatasource?.deleteCategory(id);
     } catch (_) {}
   }
+
+  @override
+  Future<void> backupToCloud() async {
+    final remote = _remoteDatasource;
+    if (remote == null) {
+      throw Exception('Cloud backup is not configured.');
+    }
+    if (remote.currentUserId == null) {
+      throw Exception('Please sign in to use cloud backup.');
+    }
+    final models = await _localDatasource.getCategories();
+    for (final model in models) {
+      await remote.upsertCategory(model);
+    }
+  }
+
+  @override
+  Future<void> restoreFromCloud({bool replaceLocal = true}) async {
+    final remote = _remoteDatasource;
+    if (remote == null) {
+      throw Exception('Cloud backup is not configured.');
+    }
+    if (remote.currentUserId == null) {
+      throw Exception('Please sign in to restore from cloud backup.');
+    }
+    final remoteModels = await remote.getCategories();
+    if (replaceLocal) {
+      await _localDatasource.clearAllCategories();
+    }
+    for (final model in remoteModels) {
+      await _localDatasource.saveCategory(model);
+    }
+  }
 }

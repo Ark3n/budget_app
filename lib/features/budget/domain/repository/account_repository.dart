@@ -7,4 +7,6 @@ abstract class AccountRepository {
   Future<void> deleteAccount(String id);
   Future<void> updateAccount(String id, double newBalance);
   Future<void> renameAccount(String id, String newName);
+  Future<void> backupToCloud();
+  Future<void> restoreFromCloud({bool replaceLocal = true});
 }

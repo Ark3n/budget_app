@@ -55,6 +55,12 @@ class LocalDatasource {
     await box.delete(id);
   }
 
+  /// Deletes every local account in the scoped Hive box.
+  Future<void> clearAllAccounts() async {
+    final box = await _accountBox;
+    await box.clear();
+  }
+
   // MARK: - CATEGORY
   /// save category
   Future<void> saveCategory(CategoryModel model) async {
@@ -87,6 +93,19 @@ class LocalDatasource {
         .toList();
     for (final t in transactions) {
       await transactionBox.put(t.id, t.copyWith(categoryId: null));
+    }
+  }
+
+  /// Deletes every local category and unlinks category IDs from transactions.
+  Future<void> clearAllCategories() async {
+    final box = await _categoryBox;
+    final transactionBox = await _transactionBox;
+    await box.clear();
+    final transactions = transactionBox.values.toList();
+    for (final t in transactions) {
+      if (t.categoryId != null) {
+        await transactionBox.put(t.id, t.copyWith(categoryId: null));
+      }
     }
   }
 

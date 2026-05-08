@@ -98,6 +98,47 @@ class TransactionCubit extends Cubit<TransactionState> {
     );
     try {
       await _transactionRepository.deleteAllTransactions();
+      emit(
+        state.copyWith(
+          status: TransactionStatus.success,
+          transactions: const [],
+          error: null,
+          transaction: null,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: TransactionStatus.failure,
+          error: _userFacingMessage(e),
+        ),
+      );
+    }
+  }
+
+  Future<void> backupToCloud() async {
+    try {
+      await _transactionRepository.backupToCloud();
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: TransactionStatus.failure,
+          error: _userFacingMessage(e),
+        ),
+      );
+    }
+  }
+
+  Future<void> restoreFromCloud() async {
+    emit(
+      state.copyWith(
+        status: TransactionStatus.loading,
+        error: null,
+        transaction: null,
+      ),
+    );
+    try {
+      await _transactionRepository.restoreFromCloud(replaceLocal: true);
       await getTransactions();
     } catch (e) {
       emit(

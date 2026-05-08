@@ -69,4 +69,37 @@ class AccountRepoImp implements AccountRepository {
       await _remote?.upsertAccount(updated);
     } catch (_) {}
   }
+
+  @override
+  Future<void> backupToCloud() async {
+    final remote = _remote;
+    if (remote == null) {
+      throw Exception('Cloud backup is not configured.');
+    }
+    if (remote.currentUserId == null) {
+      throw Exception('Please sign in to use cloud backup.');
+    }
+    final models = await _local.getAccounts();
+    for (final model in models) {
+      await remote.upsertAccount(model);
+    }
+  }
+
+  @override
+  Future<void> restoreFromCloud({bool replaceLocal = true}) async {
+    final remote = _remote;
+    if (remote == null) {
+      throw Exception('Cloud backup is not configured.');
+    }
+    if (remote.currentUserId == null) {
+      throw Exception('Please sign in to restore from cloud backup.');
+    }
+    final remoteModels = await remote.getAccounts();
+    if (replaceLocal) {
+      await _local.clearAllAccounts();
+    }
+    for (final model in remoteModels) {
+      await _local.saveAccount(model);
+    }
+  }
 }
